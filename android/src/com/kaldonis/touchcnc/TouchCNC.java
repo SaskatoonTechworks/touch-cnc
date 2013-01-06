@@ -15,10 +15,14 @@ import android.graphics.Paint;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.RectShape;
 import android.util.Log;
+import android.view.Display;
+import android.view.WindowManager;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnLongClickListener;
 import android.view.View.OnTouchListener;
+import android.media.AudioManager;
+
 
 public class TouchCNC extends View implements OnTouchListener, OnLongClickListener {
 	
@@ -29,13 +33,15 @@ public class TouchCNC extends View implements OnTouchListener, OnLongClickListen
 	float lastX,lastY,firstX,firstY;
 	String cutMode = "Path";
     
-	//actual table/piece size... is variable
+	//actual table/piece size... is variable within app
 	public Float tableY = 20.0f; //inches
 	public Float tableX = 48.0f;	
 	
+	//need to know size of our screen in order to draw
+	Integer screenWidth, screenHeight;
+	
 	//pixel size representation of table (should have same aspect ratio as actual table size)
-	Integer viewX;
-	Integer viewY;
+	Integer viewX, viewY;
 	
 	//helper booleans to tell what's going on
 	boolean isCutting = false;
@@ -50,6 +56,8 @@ public class TouchCNC extends View implements OnTouchListener, OnLongClickListen
 	//network communication stuff
 	Socket socket;
 	OutputStream nos;
+	
+	AudioManager am;
 	
 	public void sendCommand(String command)
 	{
@@ -143,6 +151,10 @@ public class TouchCNC extends View implements OnTouchListener, OnLongClickListen
 	
 	public void toolDown()
 	{
+		
+		float vol = 1.0f; //This will be half of the default system sound
+		am.playSoundEffect(AudioManager.FX_KEY_CLICK, vol);		
+		
 		if(cutMode == "Path")
 			sendCommand("G01 Z" + TouchCNCActivity.zCutDepth.toString());
 		
@@ -171,7 +183,9 @@ public class TouchCNC extends View implements OnTouchListener, OnLongClickListen
 	public boolean onLongClick(View view)
 	{	
 		if(firstX > backgroundX && firstX < backgroundX+viewX && firstY > backgroundY && firstY < backgroundY+viewY)
+		{
 			toolDown();
+		}
 		return true;
 	}
 	
@@ -228,7 +242,7 @@ public class TouchCNC extends View implements OnTouchListener, OnLongClickListen
 		
 		
 		//ignore tiny deltas
-		if(Math.abs(lastX-touchX)<2 && Math.abs(lastY-touchY)<2)
+		if(Math.abs(lastX-touchX)<10 && Math.abs(lastY-touchY)<10)
 			return false;	
 		this.cancelLongPress();
 		
@@ -296,6 +310,15 @@ public class TouchCNC extends View implements OnTouchListener, OnLongClickListen
 		}
 	}
 	
+	public void setupCNC()
+	{
+		//tells mach3 to use "absolute distance" mode
+		sendCommand("G90");
+		
+		//"incremental IJ" mode (for arcs)
+		sendCommand("G91.1");
+	}
+	
     public TouchCNC(Context context) {    	
         super(context);
         
@@ -306,8 +329,20 @@ public class TouchCNC extends View implements OnTouchListener, OnLongClickListen
         paint.setStrokeJoin(Paint.Join.ROUND);
         paint.setStrokeCap(Paint.Cap.ROUND);
         paint.setStrokeWidth(Math.abs(TouchCNCActivity.zCutDepth) * 8);
+    	
+    	//get device screen dimensions
+    	WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+    	Display display = wm.getDefaultDisplay();
+    	screenWidth = display.getWidth();
+    	screenHeight = display.getHeight();
         
+    	//create audio manager to handle playing sounds
+    	am = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
+    	
         setupSocket();
+        
+        //send any initial instructions that are necessary
+        setupCNC();
         
 	    //set up touch handler
         this.setOnLongClickListener(this);
@@ -323,20 +358,20 @@ public class TouchCNC extends View implements OnTouchListener, OnLongClickListen
     	if(!backgroundSet)
     	{
     		//calculate viewX/viewY (maximum pixel representation of tableX/tableY)
-    		if((tableX/tableY) > (1200/700)) //1200 is width
+    		if((tableX/tableY) > (screenWidth/screenHeight))
     		{
-    			viewX = 1200;
+    			viewX = screenWidth;
     			viewY = Math.round(viewX.floatValue()/(tableX/tableY));
     		}
-    		else //700 is height
+    		else
     		{
-    			viewY = 700;
+    			viewY = screenHeight;
     			viewX = Math.round(viewY.floatValue()*(tableX/tableY));
     		}
     			
     		backgroundX = this.getWidth()-viewX-((this.getWidth()-viewX)/2);
     		backgroundY = this.getHeight()-viewY-((this.getHeight()-viewY)/2);
-            background.getPaint().setColor(0xff74AC23);
+            background.getPaint().setColor(0xff74AC23); //gross green :)
             background.setBounds(backgroundX,backgroundY,backgroundX+viewX,backgroundY+viewY);
             backgroundSet = true;
     	}

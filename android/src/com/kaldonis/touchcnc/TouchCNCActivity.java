@@ -4,7 +4,9 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.StrictMode;
 import android.text.InputType;
@@ -19,8 +21,11 @@ import android.widget.Toast;
 public class TouchCNCActivity extends Activity{
     TouchCNC cncView;
     
-    public static String serverAddr = "192.168.1.9";
-    public static Float zCutDepth = -0.25f;
+    public static SharedPreferences prefs;
+    
+    public static String serverAddr;
+    public static Float zCutDepth = -0.25f; //just a default cut depth, can be changed in app
+    public static AudioManager am;
     
     public LinearLayout layout;
     
@@ -30,6 +35,10 @@ public class TouchCNCActivity extends Activity{
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        //grab the last IP that was used, if any
+        prefs = this.getSharedPreferences("com.kaldonis.touchcnc", Context.MODE_PRIVATE);
+        serverAddr = prefs.getString("com.kaldonis.touchcnc.serverAddr", "0.0.0.0");
+        
         layout = new LinearLayout(this);
         setContentView(layout);
         
@@ -53,10 +62,10 @@ public class TouchCNCActivity extends Activity{
 		public void onClick(DialogInterface dialog, int whichButton) {
 			String value = input.getText().toString();    		  
 			serverAddr = value;
+			prefs.edit().putString("com.kaldonis.touchcnc.serverAddr", serverAddr).commit();
 			
 	        cncView = new TouchCNC(context);
 	        cncView.setBackgroundColor(Color.WHITE);
-	        //setContentView(cncView);
 	        layout.addView(cncView);
 		  }
 		});
