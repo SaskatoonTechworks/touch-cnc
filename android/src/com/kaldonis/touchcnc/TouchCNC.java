@@ -34,8 +34,10 @@ public class TouchCNC extends View implements OnTouchListener, OnLongClickListen
 	String cutMode = "Path";
     
 	//actual table/piece size... is variable within app
-	public Float tableY = 20.0f; //inches
-	public Float tableX = 48.0f;	
+	public Float tableY;
+	public Float tableX;
+	
+	public Integer feedRate;
 	
 	//need to know size of our screen in order to draw
 	Integer screenWidth, screenHeight;
@@ -110,17 +112,17 @@ public class TouchCNC extends View implements OnTouchListener, OnLongClickListen
 			currentPath.setLine(firstX,firstY,lastX,lastY);
 			sendCommand("G00 X" + x1 + " Y" + y1); //rapid to start point
 			sendCommand("G01 Z" + TouchCNCActivity.zCutDepth); //lower tool
-			sendCommand("G01 X" + x2 + " Y" + y2); //cut to end point
+			sendCommand("G01 X" + x2 + " Y" + y2 + " F" + feedRate); //cut to end point
 		}
 		else if (cutMode == "Rectangle")
 		{
 			currentPath.setRect(firstX,firstY,lastX,lastY);
 			sendCommand("G00 X" + x1 + " Y" + y1); //rapid to start point
 			sendCommand("G01 Z" + TouchCNCActivity.zCutDepth); //lower tool
-			sendCommand("G01 X" + x1 + " Y" + y2); //cut side 1
-			sendCommand("G01 X" + x2 + " Y" + y2); //cut side 2
-			sendCommand("G01 X" + x2 + " Y" + y1); //cut side 3
-			sendCommand("G01 X" + x1 + " Y" + y1); //cut side 4
+			sendCommand("G01 X" + x1 + " Y" + y2 + " F" + feedRate); //cut side 1
+			sendCommand("G01 X" + x2 + " Y" + y2 + " F" + feedRate); //cut side 2
+			sendCommand("G01 X" + x2 + " Y" + y1 + " F" + feedRate); //cut side 3
+			sendCommand("G01 X" + x1 + " Y" + y1 + " F" + feedRate); //cut side 4
 		}
 		else if (cutMode == "Circle")
 		{
@@ -132,7 +134,8 @@ public class TouchCNC extends View implements OnTouchListener, OnLongClickListen
 			sendCommand("G02 X" + x2 //point on outside edge X,Y
 					     + " Y" + y2 
 					     + " I" + xOffset //center point I,J
-					     + " J" + yOffset);			
+					     + " J" + yOffset
+					     + " F" + feedRate);			
 		}
 		
 		sendCommand("G01 Z0");
@@ -254,7 +257,7 @@ public class TouchCNC extends View implements OnTouchListener, OnLongClickListen
 			if(cutMode == "Path")
 			{
 				currentPath.lineTo(touchX, touchY);
-				instruction = "G01 X" + convertX(touchX).toString() + " Y" + convertY(touchY).toString();
+				instruction = "G01 X" + convertX(touchX).toString() + " Y" + convertY(touchY).toString() + " F" + feedRate;
 			}
 			else if (cutMode == "Line")
 			{
@@ -343,6 +346,11 @@ public class TouchCNC extends View implements OnTouchListener, OnLongClickListen
         
         //send any initial instructions that are necessary
         setupCNC();
+        
+        //grab stored values for things
+        tableX = TouchCNCActivity.prefs.getFloat("com.kaldonis.touchcnc.tableX", 40.0f);
+        tableY = TouchCNCActivity.prefs.getFloat("com.kaldonis.touchcnc.tableY", 20.0f);
+        feedRate = TouchCNCActivity.prefs.getInt("com.kaldonis.touchcnc.feedRate",80);
         
 	    //set up touch handler
         this.setOnLongClickListener(this);

@@ -9,16 +9,18 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class MyServer {
+
+	static String filePath = "gcode.txt";
+	static int lineNum = 0;
+	static FileWriter outFile = null;
  
 	public static void main(String[] args){
 		  ServerSocket serverSocket = null;
 		  Socket socket = null;
 		  BufferedReader in = null;
-		  FileWriter outFile = null;
-		  
-		  int lineNum = 0;
-		  
-		  String filePath = "gcode.txt";
+		  String line;
+		  Hook hook = new Hook();
+		  Runtime.getRuntime().addShutdownHook( hook );
 		  
 		  try{
 			  outFile = new FileWriter(filePath); //open file (erases contents)
@@ -26,8 +28,6 @@ public class MyServer {
 			  System.out.println("IOException: " + e.toString());
 			  System.exit(1);
 		  }
-		  
-		  String line;
 		  
 		  try {
 			  serverSocket = new ServerSocket(2734);
@@ -82,5 +82,23 @@ public class MyServer {
 			  System.out.println("IOException: " + e.toString());
 			  System.exit(1);
 		  }
-	}	  
+	}	
+	
+  private static class Hook extends Thread {
+	    public void run() {
+	    	//need to stop cnc now, so fill buffer with exit commands...
+			  try  {
+				  System.out.println("BYE BYE");
+				  outFile.close();				  
+				  outFile = new FileWriter(filePath);
+				  for(int i=0;i<=lineNum+10;i++)
+				  {
+					  	outFile.write("exit\r\n");
+				  }
+				  outFile.close();
+			  } catch (IOException e) {
+				  e.printStackTrace();
+			  }
+	    }	
+  }
 }

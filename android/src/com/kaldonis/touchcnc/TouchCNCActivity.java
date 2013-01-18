@@ -39,6 +39,8 @@ public class TouchCNCActivity extends Activity{
         prefs = this.getSharedPreferences("com.kaldonis.touchcnc", Context.MODE_PRIVATE);
         serverAddr = prefs.getString("com.kaldonis.touchcnc.serverAddr", "0.0.0.0");
         
+        zCutDepth = prefs.getFloat("com.kaldonis.touchcnc.zCutDepth", -0.25f);
+        
         layout = new LinearLayout(this);
         setContentView(layout);
         
@@ -93,6 +95,7 @@ public class TouchCNCActivity extends Activity{
        	sm.add("Circle");
        	menu.add("Cut Depth");
        	menu.add("Cut Area");
+       	menu.add("Feed Rate");
        	menu.add("Clear Screen");
     	
     	return true;
@@ -124,6 +127,7 @@ public class TouchCNCActivity extends Activity{
     		public void onClick(DialogInterface dialog, int whichButton) {
     			String value = input.getText().toString();    		  
     			zCutDepth = Float.valueOf(value);
+    			prefs.edit().putFloat("com.kaldonis.touchcnc.zCutDepth", zCutDepth).commit();
     		  }
     		});
 
@@ -134,16 +138,45 @@ public class TouchCNCActivity extends Activity{
 
     		alert.show();
     	}
+    	else if(title == "Feed Rate")
+    	{
+        	// Set an EditText view to get user input 
+    		final EditText input = new EditText(this);
+     		AlertDialog.Builder alert = new AlertDialog.Builder(this);
+
+     		input.setInputType(InputType.TYPE_CLASS_NUMBER);
+     		input.setHint(cncView.feedRate.toString());
+     		
+    		alert.setTitle("Feed Rate");
+    		alert.setMessage("Feed Rate");
+    		alert.setView(input);
+
+    		alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+    		public void onClick(DialogInterface dialog, int whichButton) {
+    			String value = input.getText().toString();    		  
+    			cncView.feedRate = Integer.valueOf(value);
+    			prefs.edit().putInt("com.kaldonis.touchcnc.feedRate", cncView.feedRate).commit();
+    		  }
+    		});
+
+    		alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+    		  public void onClick(DialogInterface dialog, int whichButton) {		    
+    		  }
+    		});
+
+    		alert.show();
+    	}    	
     	else if(title == "Cut Area")
     	{
         	// Set an EditText view to get user input 
     		final EditText input = new EditText(this);
      		AlertDialog.Builder alert = new AlertDialog.Builder(this);
 
+     		input.setInputType(InputType.TYPE_CLASS_PHONE);
      		input.setHint(cncView.tableX.toString() + "," + cncView.tableY.toString());
      		
     		alert.setTitle("Cut Area");
-    		alert.setMessage("Specify piece dimensions in format 'Width,Height' (inches)");
+    		alert.setMessage("Specify piece dimensions in format 'Width,Height'");
     		alert.setView(input);
 
     		alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
@@ -151,6 +184,8 @@ public class TouchCNCActivity extends Activity{
     			String value = input.getText().toString();
     			cncView.tableX = Float.valueOf(value.split(",")[0]);
     			cncView.tableY = Float.valueOf(value.split(",")[1]);
+    			prefs.edit().putFloat("com.kaldonis.touchcnc.tableX", cncView.tableX).commit();
+    			prefs.edit().putFloat("com.kaldonis.touchcnc.tableY", cncView.tableY).commit();
     			cncView.backgroundSet = false;
     			cncView.invalidate();
     		  }
